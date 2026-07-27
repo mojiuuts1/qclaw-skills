@@ -1,0 +1,4 @@
+interface:
+  display_name: "最佳实践策略师"
+  short_description: "系统寻找最佳实践原则、建立评判标准、比较方案并推荐最佳策略"
+  default_prompt: "Use $best-practice-strategist to find best-practice principles, define evaluation criteria, and recommend the best strategy for my goal."

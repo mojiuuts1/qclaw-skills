@@ -1,0 +1,63 @@
+schema_version: 2
+name: framework
+description: 框架开发流水线——设计框架、递归打磨、事实核查
+version: 1.1
+
+inputs:
+  domain:
+    default: ""
+    required: true
+    aliases: [领域]
+  goal:
+    default: ""
+    required: true
+    aliases: [目标]
+  contains_sensitive_data:
+    type: boolean
+    default: false
+    aliases: [包含敏感数据]
+
+limits:
+  max_prompt_chars: 40000
+  max_step_output_chars: 14000
+  default_timeout_seconds: 240
+
+steps:
+  - id: framework-design
+    skill: framework-builder
+    prompt: |
+      请在 {{ domain }} 领域围绕以下目标设计完整框架：
+
+      {{ goal }}
+
+      按 framework-builder 的七步流程执行，输出完整框架文档。
+    capture: framework_doc
+    timeout_seconds: 240
+    max_output_chars: 12000
+    on_failure: halt
+
+  - id: recursive-polish
+    skill: recursive-ai
+    prompt: |
+      请对以下框架执行生成→批评→修订→验证，最终只输出打磨后的完整框架：
+
+      {{ framework_doc }}
+    capture: polished_framework
+    timeout_seconds: 300
+    max_output_chars: 12000
+    on_failure: halt
+
+  - id: fact-check
+    skill: fact-check
+    prompt: |
+      请核查以下框架中的事实、数据、案例和术语定义：
+
+      {{ polished_framework }}
+    capture: fact_check_report
+    timeout_seconds: 240
+    max_output_chars: 10000
+    on_failure: halt
+
+outputs:
+  primary: polished_framework
+  evidence: fact_check_report

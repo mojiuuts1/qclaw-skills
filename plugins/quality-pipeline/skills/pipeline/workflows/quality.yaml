@@ -1,0 +1,207 @@
+schema_version: 2
+name: quality
+description: 项目与任务质量流水线——最佳实践、失效模式、工具栈、递归打磨、可选外部审查、事实修正与最终核查
+version: 1.4
+
+inputs:
+  question:
+    default: ""
+    required: true
+    aliases: [问题]
+  include_failure_analysis:
+    type: boolean
+    default: true
+    aliases: [包含失效模式]
+  include_tools:
+    type: boolean
+    default: true
+    aliases: [包含工具]
+  allow_external_review:
+    type: boolean
+    default: false
+    aliases: [允许外部审查]
+  contains_sensitive_data:
+    type: boolean
+    default: false
+    aliases: [包含敏感数据]
+
+limits:
+  max_prompt_chars: 50000
+  max_step_output_chars: 16000
+  default_timeout_seconds: 240
+
+steps:
+  - id: best-practice-analysis
+    skill: best-practice-strategist
+    prompt: |
+      请针对以下问题寻找最佳实践原则，建立明确的评判标准，比较可行策略，并提出最适合当前情境的策略：
+
+      {{ question }}
+
+      要求：
+      - 明确目标、约束、假设和“最佳”的定义
+      - 区分事实、证据、估计和价值判断
+      - 给出最佳实践原则、评判标准、策略比较和可执行建议
+      - 标注不确定性、关键权衡及可能推翻结论的条件
+      - 控制在 8000 字符以内
+    capture: best_practice_output
+    timeout_seconds: 240
+    max_output_chars: 10000
+    on_failure: halt
+
+  - id: failure-mode-analysis
+    skill: project-failure-mode-analyst
+    when: include_failure_analysis == true
+    prompt: |
+      请分析原始问题及其最佳实践方案中可能出现的项目失效模式。
+
+      原始问题：
+      {{ question }}
+
+      最佳实践方案：
+      {{ best_practice_output }}
+
+      要求：
+      - 分别检查用户自身的决策与执行、外部 AI/工具/数据、人机协作接口
+      - 区分已观察、用户报告、推断和通用模式，不把假设写成个人事实
+      - 识别跨层错误放大路径、静默失效和控制措施本身的失效
+      - 只保留最高优先级模式，给出控制和备用方案
+      - 控制在 7000 字符以内
+    capture: failure_mode_output
+    timeout_seconds: 180
+    max_output_chars: 9000
+    on_failure: continue
+    fallback:
+      value: "失效模式分析未执行；后续步骤不得假定已经完成风险分析。"
+
+  - id: tool-stack-recommendation
+    skill: tool-stack-recommender
+    when: include_tools == true
+    prompt: |
+      请根据原始问题、最佳实践方案和失效模式分析，判断哪些工具能够真正改善项目，并排列最适合的工具或工具栈。
+
+      原始问题：
+      {{ question }}
+
+      最佳实践方案：
+      {{ best_practice_output }}
+
+      失效模式分析：
+      {{ failure_mode_output }}
+
+      要求：
+      - 先定义能力需求，再研究工具
+      - 公平考虑现有工具、“不增加工具”、低成本和开放可迁移方案
+      - 淘汰不符合预算、平台、隐私、安全或集成要求的工具
+      - 核实现行功能、价格、限制和可用性；没有实时证据时明确标注
+      - 给出顺序、交接、验证、总成本和备用方案
+      - 没有新工具能产生足够价值时，明确建议维持现状
+      - 控制在 7000 字符以内
+    capture: tool_stack_output
+    timeout_seconds: 240
+    max_output_chars: 9000
+    on_failure: continue
+    fallback:
+      value: "工具栈分析未执行；后续方案不得臆造工具建议。"
+
+  - id: recursive-draft
+    skill: recursive-ai
+    prompt: |
+      请根据原始问题，结合以下分析深度打磨最终方案。
+
+      原始问题：
+      {{ question }}
+
+      最佳实践分析：
+      {{ best_practice_output }}
+
+      失效模式分析：
+      {{ failure_mode_output }}
+
+      工具栈建议：
+      {{ tool_stack_output }}
+
+      要求：
+      - 执行生成→批评→修订→验证，最终只输出完整修订稿
+      - 将高优先级风险转化为预防、检测、响应和停止条件
+      - 只保留确实改善结果的工具
+      - 区分事实、推断和建议，标注不确定内容
+      - 控制在 10000 字符以内
+    capture: draft_output
+    timeout_seconds: 300
+    max_output_chars: 12000
+    on_failure: halt
+
+  - id: adversarial-review
+    skill: grill
+    when: allow_external_review == true
+    external: true
+    requires_consent: allow_external_review
+    prompt: |
+      请对以下修订稿进行跨模型对抗审查，并输出经过审查后的完整修订版。不得省略原稿中的关键结论；新增事实必须标注来源或不确定性。
+
+      {{ draft_output }}
+    capture: reviewed_output
+    timeout_seconds: 300
+    max_output_chars: 12000
+    on_failure: continue
+    fallback:
+      from: draft_output
+
+  - id: fact-check
+    skill: fact-check
+    prompt: |
+      请对以下内容进行严格事实核查，按 ✅/❌/⚠️ 逐条判定。只核查可验证事实，不把价值判断当作事实：
+
+      {{ reviewed_output }}
+    capture: fact_check_report
+    timeout_seconds: 240
+    max_output_chars: 12000
+    on_failure: halt
+
+  - id: factual-correction
+    skill: recursive-ai
+    prompt: |
+      请根据事实核查报告修订原稿，输出可直接交付的完整最终稿。
+
+      原稿：
+      {{ reviewed_output }}
+
+      事实核查报告：
+      {{ fact_check_report }}
+
+      要求：
+      - 修正确认错误的事实
+      - 无法确认的内容应删除、弱化或明确标注
+      - 不新增核查报告之外的事实性断言
+      - 保留有依据的分析、策略和行动建议
+      - 只输出最终稿，不输出修订过程
+    capture: corrected_output
+    timeout_seconds: 240
+    max_output_chars: 12000
+    on_failure: halt
+
+  - id: final-fact-check
+    skill: fact-check
+    prompt: |
+      请对下面的最终稿做最后事实核查，重点检查修订过程中是否引入新事实错误。按 ✅/❌/⚠️ 输出报告：
+
+      {{ corrected_output }}
+
+      报告最后必须单独输出一行：
+      - 没有确认错误且不存在影响主要结论的重大不确定性：FINAL_FACT_STATUS: PASS
+      - 否则：FINAL_FACT_STATUS: FAIL
+    capture: final_fact_check_report
+    timeout_seconds: 240
+    max_output_chars: 12000
+    on_failure: halt
+
+outputs:
+  primary: corrected_output
+  evidence: final_fact_check_report
+  adversarial_version: reviewed_output
+
+gates:
+  - variable: final_fact_check_report
+    pattern: "FINAL_FACT_STATUS: PASS"
+    message: "最终事实核查未通过；不得把 primary 宣称为已验证完成稿。"

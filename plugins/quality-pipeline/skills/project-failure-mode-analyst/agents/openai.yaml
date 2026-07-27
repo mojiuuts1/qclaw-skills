@@ -1,0 +1,4 @@
+interface:
+  display_name: "项目失效模式分析师"
+  short_description: "识别个人、AI及人机协作中的常见项目失效模式并制定控制措施"
+  default_prompt: "Use $project-failure-mode-analyst to identify internal, AI, and human-AI interaction failure modes in my project and create a prioritized control plan."

@@ -1,0 +1,39 @@
+{
+  "name": "quality-pipeline",
+  "version": "1.4.0",
+  "description": "A verifiable quality workflow for best practices, failure modes, tool selection, iterative revision, adversarial review, and fact-checking.",
+  "author": {
+    "name": "mengdejun",
+    "url": "https://github.com/mojiuuts1"
+  },
+  "homepage": "https://github.com/mojiuuts1/qclaw-skills",
+  "repository": "https://github.com/mojiuuts1/qclaw-skills",
+  "license": "MIT",
+  "keywords": [
+    "quality",
+    "workflow",
+    "best-practices",
+    "failure-modes",
+    "fact-checking"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Quality Pipeline",
+    "shortDescription": "Turn complex questions into checked, risk-aware plans.",
+    "longDescription": "Runs a composable quality workflow across best-practice analysis, project failure modes, tool-stack selection, recursive revision, optional external adversarial review, factual correction, and a final verification gate.",
+    "developerName": "mengdejun",
+    "category": "Productivity",
+    "capabilities": [
+      "Analysis",
+      "Planning",
+      "Verification"
+    ],
+    "websiteURL": "https://github.com/mojiuuts1/qclaw-skills",
+    "defaultPrompt": [
+      "Use the quality pipeline to improve this project plan.",
+      "Find the failure modes in this project and add controls.",
+      "Recommend the best tool stack for this task."
+    ],
+    "brandColor": "#3157D5"
+  }
+}

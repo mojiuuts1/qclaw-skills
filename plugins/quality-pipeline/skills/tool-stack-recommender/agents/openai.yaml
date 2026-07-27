@@ -1,0 +1,4 @@
+interface:
+  display_name: "项目工具栈建议师"
+  short_description: "根据项目工作流、约束与风险评估排序并组合最佳工具栈和替代方案"
+  default_prompt: "Use $tool-stack-recommender to evaluate, rank, and arrange the best-fit tools for my project workflow."
